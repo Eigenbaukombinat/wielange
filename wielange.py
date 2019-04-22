@@ -16,32 +16,38 @@ mqtt_client.enable_logger(logger=log)
 mqtt_client.connect('putin')
 mqtt_client.subscribe('/esp32ebttest/wie')
 mqtt_client.subscribe('/esp32ebttest/bis')
-mqtt_client.subscribe('/space/status/open')
+mqtt_client.subscribe('space/status/open')
+
+CURRENT_HOWLONG = None
+
+
+def set_output(closetime=None):
+    with open('/home/spaceapi/spaceapi/htdocs/openuntil.json', 'w') as outfile:
+        CURRENT_HOWLONG = closetime
+        out_data = dict(closetime=closetime)
+        outfile.write(json.dumps(out_data))
 
 
 def mqtt_received(client, data, msg):
-	opentopic = '/space/status/open'
-	if msg.topic == opentopic and msg.payload.decode('utf8') != 'true':
-		log.info('Space closed, reset wielange time info.')
-		closetime = None
-	elif topic.startswith('/esp32ebttest'):
-		log.info('Received msg from wiebis: {}, containing {}'.format(
-					msg.topic, msg.payload))
-		value = int(msg.payload)
-		hours = value // 100
-		minutes = value - (hours * 100)
-		if msg.topic.endswith('bis'):
-			# uhrzeit
-			closetime = datetime.time(hours, minutes).strftime('%H:%M')
-		elif msg.topic.endswith('wie'):
-			# stunden:minuten ab jetzt
-			fromnow = datetime.timedelta(hours=hours, minutes=minutes)
-			closedt = datetime.datetime.now() + fromnow
-			closetime = closedt.strftime('%H:%M')
-
-	with open('openuntil.json', 'w') as outfile:
-		out_data = dict(closetime=closetime)
-		outfile.write(json.dumps(out_data))
+    opentopic = 'space/status/open'
+    if msg.topic == opentopic and msg.payload.decode('utf8') != 'true':
+        log.info('Space closed, reset wielange time info.')
+        set_output()
+        return
+    log.info('Received msg from wiebis: {}, containing {}'.format(
+                msg.topic, msg.payload))
+    value = int(msg.payload)
+    hours = value // 100
+    minutes = value - (hours * 100)
+    if msg.topic.endswith('bis'):
+        # uhrzeit
+        set_output(datetime.time(hours, minutes).strftime('%H:%M'))
+    elif msg.topic.endswith('wie'):
+        # stunden:minuten ab jetzt
+        fromnow = datetime.timedelta(hours=hours, minutes=minutes)
+        closedt = datetime.datetime.now() + fromnow
+        set_output(closedt.strftime('%H:%M'))
+    
 
 
 
@@ -50,5 +56,10 @@ mqtt_client.loop_start()
 
 
 while True:
-	time.sleep(1)
+    curdt = datetime.datetime.now().strftime('%H:%M')
+    if curdt == CURRENT_HOWLONG:
+        # time reached, resetting output
+        set_output()
+
+    time.sleep(1)
 

@@ -1,3 +1,4 @@
+from ebk_status import is_open
 import datetime
 import json
 import logging
@@ -32,28 +33,35 @@ def telnet(txt):
     telnet.write(txt.encode('latin1'))
 
 
-def set_output(client, closetime=None):
-    if closetime is not None:
-        display_text(client, 'offen bis: %s - Willkommen im Eigenbaukombinat' % closetime)
-        client.publish('space/status/closetime', closetime)
+def write_json(closetime):
     with open('/home/spaceapi/spaceapi/htdocs/openuntil.json', 'w') as outfile:
         out_data = dict(closetime=closetime)
         outfile.write(json.dumps(out_data))
+
+
+def set_output(client, closetime):
+    if not is_open():
+        display_text(client, 'ERROR: Schliesszeit eingestellt, aber Space zu.')
+        client.publish('space/status/error', 'Schliesszeit eingestellt, aber Space zu!')
+    else:
+        display_text(client, 'offen bis: %s - Willkommen im Eigenbaukombinat' % closetime)
+        client.publish('space/status/closetime', closetime)
 
 
 def display_text(client, text):
     telnet(text)
     client.publish('display/ledlaufschrift/text', text)
 
+
 def mqtt_received(client, data, msg):
     opentopic = 'space/status/open'
     if msg.topic == opentopic:
         if msg.payload.decode('utf8') != 'true':
             log.info('Space closed, reset wielange time info.')
-            set_output(client)
+            write_json(None)
         else:
             log.info('Space opened, reset wielange time info.')
-            set_output(client)
+            write_json(None)
             display_text(client, b'space offen, bitte zeit setzen')
         return
     log.info('Received msg from wiebis: {}, containing {}'.format(
@@ -63,12 +71,16 @@ def mqtt_received(client, data, msg):
     minutes = value - (hours * 100)
     if msg.topic.endswith('biswann'):
         # uhrzeit
-        set_output(client, datetime.time(hours, minutes).strftime('%H:%M'))
+        ctime = datetime.time(hours, minutes).strftime('%H:%M')
+        set_output(client, ctime)
+        write_json(ctime)
     elif msg.topic.endswith('wielange'):
         # stunden:minuten ab jetzt
         fromnow = datetime.timedelta(hours=hours, minutes=minutes)
         closedt = datetime.datetime.now() + fromnow
-        set_output(client, closedt.strftime('%H:%M'))
+        ctime = closedt.strftime('%H:%M')
+        set_output(client, ctime)
+        write_json(ctime)
 
 
 mqtt_client.on_message = mqtt_received
@@ -82,7 +94,7 @@ while True:
     if curdt == howlongdata['closetime']:
         # time reached, resetting output
         display_text(mqtt_client, 'schliesszeit erreicht, bitte neu setzen oder space schliessen')
-        set_output(mqtt_client)
+        write_json(None)
 
     time.sleep(5)
 

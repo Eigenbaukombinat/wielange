@@ -22,9 +22,9 @@ mqtt_client.subscribe('space/status/open')
 
 def telnet(txt):
     try:
-        telnet = telnetlib.Telnet('192.168.21.148')
+        telnet = telnetlib.Telnet('vfddisplay.lan')
     except:
-        logging.error('Cannot connect to display, make sure it is on the network with IP 192.168.21.148')
+        logging.error('Cannot connect to display, make sure it is on the network with vfddisplay.lan')
         return
     telnet.write('\n\n'.encode('latin1'))
     telnet.write(chr(0x0D).encode('latin1')) #0x0D clear; 0x0F All Display; 0x0B scroll; 
@@ -41,10 +41,10 @@ def write_json(closetime):
 
 def set_output(client, closetime):
     if not is_open():
-        display_text(client, 'ERROR: Schliesszeit eingestellt, aber Space zu.')
+        display_text(client, 'Schliesszeit eingestellt, aber Space zu.') # max 40 Zeichen
         client.publish('space/status/error', 'Schliesszeit eingestellt, aber Space zu!')
     else:
-        display_text(client, 'offen bis: %s - Willkommen im Eigenbaukombinat' % closetime)
+        display_text(client, 'Space offen bis min %s Uhr' % closetime) # max 40 Zeichen
         client.publish('space/status/closetime', closetime)
 
 
@@ -62,7 +62,7 @@ def mqtt_received(client, data, msg):
         else:
             log.info('Space opened, reset wielange time info.')
             write_json(None)
-            display_text(client, b'space offen, bitte zeit setzen')
+            display_text(client, b'Space offen, bitte zeit setzen') # max 40 Zeichen
         return
     log.info('Received msg from wiebis: {}, containing {}'.format(
                 msg.topic, msg.payload))
@@ -93,7 +93,7 @@ while True:
         howlongdata = json.loads(howlong.read())
     if curdt == howlongdata['closetime']:
         # time reached, resetting output
-        display_text(mqtt_client, 'schliesszeit erreicht, bitte neu setzen oder space schliessen')
+        display_text(mqtt_client, 'Schliesszeit erreicht, bitte neu setzen') # max 40 Zeichen
         write_json(None)
 
     time.sleep(5)

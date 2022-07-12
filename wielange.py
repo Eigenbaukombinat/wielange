@@ -23,7 +23,7 @@ def on_connect(client, userdata, flags, rc):
 mqtt_client = mqtt.Client()
 mqtt_client.enable_logger(logger=log)
 mqtt_client.on_connect = on_connect
-mqtt_client.connect('putin')
+mqtt_client.connect('localhost')
 
 
 def telnet(txt):

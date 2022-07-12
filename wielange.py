@@ -12,12 +12,18 @@ logging.basicConfig(level=logging.DEBUG,
 log = logging.getLogger(__name__)
 
 
+def on_connect(client, userdata, flags, rc):
+    if rc==0:
+        client.subscribe('space/status/wielange')
+        client.subscribe('space/status/biswann')
+        client.subscribe('space/status/open')
+
+
+
 mqtt_client = mqtt.Client()
 mqtt_client.enable_logger(logger=log)
+mqtt_client.on_connect = on_connect
 mqtt_client.connect('putin')
-mqtt_client.subscribe('space/status/wielange')
-mqtt_client.subscribe('space/status/biswann')
-mqtt_client.subscribe('space/status/open')
 
 
 def telnet(txt):

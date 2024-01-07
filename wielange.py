@@ -31,7 +31,7 @@ mqtt_client.connect(config.mqtt_broker)
 
 
 def write_json(closetime):
-    with open('/home/spaceapi/spaceapi/htdocs/openuntil.json', 'w') as outfile:
+    with open('/home/spaceapi/htdocs/openuntil.json', 'w') as outfile:
         out_data = dict(closetime=closetime)
         outfile.write(json.dumps(out_data))
 
@@ -85,7 +85,7 @@ mqtt_client.loop_start()
 
 while True:
     curdt = datetime.datetime.now().strftime('%H:%M')
-    with open('/home/spaceapi/spaceapi/htdocs/openuntil.json', 'r') as howlong:
+    with open('/home/spaceapi/htdocs/openuntil.json', 'r') as howlong:
         howlongdata = json.loads(howlong.read())
     if curdt == howlongdata['closetime']:
         # time reached, resetting output

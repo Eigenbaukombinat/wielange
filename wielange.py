@@ -4,7 +4,11 @@ import json
 import logging
 import paho.mqtt.client as mqtt
 import time
-import telnetlib
+
+import argparse
+parser = argparse.ArgumentParser(description='EBK wie lange ist offen zeugs')
+parser.add_argument('--mqtt_broker', dest='mqtt_broker', default='localhost', help='Hostname/IP of the mqtt server (default:localhost).')
+config = parser.parse_args()
 
 logging.basicConfig(level=logging.DEBUG,
                         format='%(asctime)s %(name)s '
@@ -23,20 +27,7 @@ def on_connect(client, userdata, flags, rc):
 mqtt_client = mqtt.Client()
 mqtt_client.enable_logger(logger=log)
 mqtt_client.on_connect = on_connect
-mqtt_client.connect('localhost')
-
-
-def telnet(txt):
-    try:
-        telnet = telnetlib.Telnet('vfddisplay.lan')
-    except:
-        logging.error('Cannot connect to display, make sure it is on the network with vfddisplay.lan')
-        return
-    telnet.write('\n\n'.encode('latin1'))
-    telnet.write(chr(0x0D).encode('latin1')) #0x0D clear; 0x0F All Display; 0x0B scroll; 
-    telnet.write(chr(0x10).encode('latin1'))  ##Displayposition   0x10  
-    telnet.write(chr(0).encode('latin1'))    ##Position
-    telnet.write(txt.encode('latin1'))
+mqtt_client.connect(config.mqtt_broker)
 
 
 def write_json(closetime):
@@ -55,7 +46,6 @@ def set_output(client, closetime):
 
 
 def display_text(client, text):
-    telnet(text)
     client.publish('display/ledlaufschrift/text', text)
 
 
